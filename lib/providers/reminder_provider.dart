@@ -1,0 +1,87 @@
+// lib/providers/reminder_provider.dart
+
+import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
+
+class ReminderProvider extends ChangeNotifier {
+  // Gunakan base class
+  late final NotificationServiceBase _notificationService;
+  
+  bool _isReminderEnabled = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 19, minute: 0);
+  
+  bool get isReminderEnabled => _isReminderEnabled;
+  TimeOfDay get reminderTime => _reminderTime;
+
+  // Constructor dengan parameter optional
+  ReminderProvider({NotificationServiceBase? notificationService}) {
+    _notificationService = notificationService ?? NotificationService();
+    _loadReminderSettings();
+  }
+
+  Future<void> _loadReminderSettings() async {
+    try {
+      _isReminderEnabled = await _notificationService.isReminderEnabled();
+      final savedTime = await _notificationService.getReminderTime();
+      if (savedTime != null) {
+        _reminderTime = savedTime;
+      }
+    } catch (e) {
+      print('Error loading reminder settings: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> toggleReminder(bool value) async {
+    _isReminderEnabled = value;
+    
+    try {
+      if (value) {
+        await _notificationService.toggleReminder(true, time: _reminderTime);
+      } else {
+        await _notificationService.toggleReminder(false);
+      }
+    } catch (e) {
+      print('Error toggling reminder: $e');
+    }
+    
+    notifyListeners();
+  }
+
+  Future<void> setReminderTime(TimeOfDay time) async {
+    _reminderTime = time;
+    
+    try {
+      if (_isReminderEnabled) {
+        await _notificationService.scheduleDailyReminder(time);
+      }
+    } catch (e) {
+      print('Error setting reminder time: $e');
+    }
+    
+    notifyListeners();
+  }
+
+  Future<void> updateReminder(bool enabled, TimeOfDay time) async {
+    _isReminderEnabled = enabled;
+    _reminderTime = time;
+    
+    try {
+      await _notificationService.toggleReminder(enabled, time: time);
+    } catch (e) {
+      print('Error updating reminder: $e');
+    }
+    
+    notifyListeners();
+  }
+
+  String getFormattedTime() {
+    final hour = _reminderTime.hour.toString().padLeft(2, '0');
+    final minute = _reminderTime.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String getTimePeriod() {
+    return _reminderTime.period == DayPeriod.am ? 'AM' : 'PM';
+  }
+}
