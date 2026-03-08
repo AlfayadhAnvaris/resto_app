@@ -1,64 +1,75 @@
-// test/notification_service_test.dart
+// test/reminder_provider_test.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:resto_app/services/notification_service.dart';
+import 'package:resto_app/providers/reminder_provider.dart';
+import 'mocks/mock_notifcation_service.dart';
 
 void main() {
-  late NotificationService notificationService;
-
-  setUpAll(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    
-    // Set up mock SharedPreferences
-    SharedPreferences.setMockInitialValues({});
-  });
+  late ReminderProvider reminderProvider;
+  late MockNotificationService mockService;
 
   setUp(() {
-    notificationService = NotificationService();
+    TestWidgetsFlutterBinding.ensureInitialized();
+    
+    // Buat mock service
+    mockService = MockNotificationService();
+    
+    // Inject mock service ke provider
+    reminderProvider = ReminderProvider(notificationService: mockService);
   });
 
-  group('NotificationService Tests', () {
+  group('ReminderProvider Tests', () {
     test('Initial reminder should be disabled', () async {
-      final isEnabled = await notificationService.isReminderEnabled();
+      final isEnabled = await reminderProvider.isReminderEnabled;
       expect(isEnabled, false);
     });
 
-    test('Reminder time should be null initially', () async {
-      final time = await notificationService.getReminderTime();
-      expect(time, isNull);
+    test('Default reminder time should be 19:00 (7 PM)', () {
+      expect(reminderProvider.reminderTime.hour, 19);
+      expect(reminderProvider.reminderTime.minute, 0);
     });
 
-    test('toggleReminder should save settings', () async {
-      const testTime = TimeOfDay(hour: 20, minute: 30);
-      
-      // Panggil method dengan try-catch untuk menghindari error plugin
-      try {
-        await notificationService.toggleReminder(true, time: testTime);
-      } catch (e) {
-        print('Expected error in test environment: $e');
-        // Jika error, kita tetap lanjutkan test dengan mock manual
-      }
-      
-      // Test tetap jalan dengan SharedPreferences mock
-      final isEnabled = await notificationService.isReminderEnabled();
-      final savedTime = await notificationService.getReminderTime();
-      
-      expect(isEnabled, true);
-      expect(savedTime?.hour, 20);
-      expect(savedTime?.minute, 30);
+    test('Formatted time should be correct', () {
+      expect(reminderProvider.getFormattedTime(), '19:00');
     });
 
-    test('cancelReminder should disable reminder', () async {
-      try {
-        await notificationService.cancelReminder();
-      } catch (e) {
-        print('Expected error in test environment: $e');
-      }
+    test('Time period should be PM for 19:00', () {
+      expect(reminderProvider.getTimePeriod(), 'PM');
+    });
+
+    test('setReminderTime should update reminder time', () async {
+      const newTime = TimeOfDay(hour: 8, minute: 30);
       
-      final isEnabled = await notificationService.isReminderEnabled();
-      expect(isEnabled, false);
+      await reminderProvider.setReminderTime(newTime);
+      
+      expect(reminderProvider.reminderTime.hour, 8);
+      expect(reminderProvider.reminderTime.minute, 30);
+      expect(reminderProvider.getFormattedTime(), '08:30');
+      expect(reminderProvider.getTimePeriod(), 'AM');
+    });
+
+    test('toggleReminder should enable/disable reminder', () async {
+      // Initial state should be disabled
+      expect(await reminderProvider.isReminderEnabled, false);
+      
+      // Enable reminder
+      await reminderProvider.toggleReminder(true);
+      expect(await reminderProvider.isReminderEnabled, true);
+      
+      // Disable reminder
+      await reminderProvider.toggleReminder(false);
+      expect(await reminderProvider.isReminderEnabled, false);
+    });
+
+    test('updateReminder should update both enabled and time', () async {
+      const newTime = TimeOfDay(hour: 10, minute: 15);
+      
+      await reminderProvider.updateReminder(true, newTime);
+      
+      expect(await reminderProvider.isReminderEnabled, true);
+      expect(reminderProvider.reminderTime.hour, 10);
+      expect(reminderProvider.reminderTime.minute, 15);
     });
   });
 }

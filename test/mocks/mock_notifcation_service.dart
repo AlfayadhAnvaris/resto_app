@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:resto_app/services/notification_service.dart';
 
-// Mock class yang mengimplementasikan base class
+// Mock class untuk testing
 class MockNotificationService implements NotificationServiceBase {
   bool _mockReminderEnabled = false;
   TimeOfDay? _mockReminderTime;
