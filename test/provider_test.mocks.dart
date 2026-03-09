@@ -3,11 +3,12 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i4;
+import 'dart:async' as _i5;
 
+import 'package:http/http.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:resto_app/models/restaurant.dart' as _i2;
-import 'package:resto_app/services/api_service.dart' as _i3;
+import 'package:resto_app/models/restaurant.dart' as _i3;
+import 'package:resto_app/services/api_service.dart' as _i4;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -24,46 +25,59 @@ import 'package:resto_app/services/api_service.dart' as _i3;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
-class _FakeRestaurant_0 extends _i1.SmartFake implements _i2.Restaurant {
-  _FakeRestaurant_0(Object parent, Invocation parentInvocation)
+class _FakeClient_0 extends _i1.SmartFake implements _i2.Client {
+  _FakeClient_0(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakeRestaurant_1 extends _i1.SmartFake implements _i3.Restaurant {
+  _FakeRestaurant_1(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
 /// A class which mocks [ApiService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockApiService extends _i1.Mock implements _i3.ApiService {
+class MockApiService extends _i1.Mock implements _i4.ApiService {
   MockApiService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Future<List<_i2.Restaurant>> fetchRestaurants() =>
+  _i2.Client get client =>
+      (super.noSuchMethod(
+            Invocation.getter(#client),
+            returnValue: _FakeClient_0(this, Invocation.getter(#client)),
+          )
+          as _i2.Client);
+
+  @override
+  _i5.Future<List<_i3.Restaurant>> fetchRestaurants() =>
       (super.noSuchMethod(
             Invocation.method(#fetchRestaurants, []),
-            returnValue: _i4.Future<List<_i2.Restaurant>>.value(
-              <_i2.Restaurant>[],
+            returnValue: _i5.Future<List<_i3.Restaurant>>.value(
+              <_i3.Restaurant>[],
             ),
           )
-          as _i4.Future<List<_i2.Restaurant>>);
+          as _i5.Future<List<_i3.Restaurant>>);
 
   @override
-  _i4.Future<_i2.Restaurant> fetchDetail(String? id) =>
+  _i5.Future<_i3.Restaurant> fetchDetail(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#fetchDetail, [id]),
-            returnValue: _i4.Future<_i2.Restaurant>.value(
-              _FakeRestaurant_0(this, Invocation.method(#fetchDetail, [id])),
+            returnValue: _i5.Future<_i3.Restaurant>.value(
+              _FakeRestaurant_1(this, Invocation.method(#fetchDetail, [id])),
             ),
           )
-          as _i4.Future<_i2.Restaurant>);
+          as _i5.Future<_i3.Restaurant>);
 
   @override
-  _i4.Future<Map<String, dynamic>> getRestaurantDetail(String? id) =>
+  _i5.Future<Map<String, dynamic>> getRestaurantDetail(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#getRestaurantDetail, [id]),
-            returnValue: _i4.Future<Map<String, dynamic>>.value(
+            returnValue: _i5.Future<Map<String, dynamic>>.value(
               <String, dynamic>{},
             ),
           )
-          as _i4.Future<Map<String, dynamic>>);
+          as _i5.Future<Map<String, dynamic>>);
 }

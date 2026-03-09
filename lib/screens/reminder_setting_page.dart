@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:resto_app/services/notification_service.dart';
 import '../providers/reminder_provider.dart';
 
 class ReminderSettingsPage extends StatefulWidget {
@@ -30,12 +29,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with illustration
                 _buildHeader(),
-                
                 const SizedBox(height: 24),
-                
-                // Reminder Card
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -45,7 +40,6 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        // Enable/Disable Switch
                         SwitchListTile(
                           title: const Text(
                             'Enable Daily Reminder',
@@ -63,18 +57,14 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                             setState(() => _isLoading = true);
                             await reminderProvider.toggleReminder(value);
                             setState(() => _isLoading = false);
-                            
                             _showSnackBar(
-                              value 
-                                ? 'Daily reminder enabled'
-                                : 'Daily reminder disabled',
+                              value
+                                  ? 'Daily reminder enabled'
+                                  : 'Daily reminder disabled',
                             );
                           },
                         ),
-                        
                         const Divider(height: 32),
-                        
-                        // Time Picker
                         if (reminderProvider.isReminderEnabled) ...[
                           const Text(
                             'Reminder Time',
@@ -83,9 +73,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          
                           const SizedBox(height: 12),
-                          
                           InkWell(
                             onTap: () => _selectTime(context, reminderProvider),
                             borderRadius: BorderRadius.circular(12),
@@ -136,10 +124,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 24),
-                
-                // Info Card
                 Card(
                   elevation: 1,
                   shape: RoundedRectangleBorder(
@@ -152,11 +137,7 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                       children: [
                         const Row(
                           children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: Colors.blue,
-                              size: 20,
-                            ),
+                            Icon(Icons.info_outline, color: Colors.blue, size: 20),
                             SizedBox(width: 8),
                             Text(
                               'About Daily Reminder',
@@ -168,46 +149,39 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          '• You will receive a notification at your selected time',
-                          style: TextStyle(fontSize: 14),
-                        ),
+                        const Text('• You will receive a notification at your selected time',
+                            style: TextStyle(fontSize: 14)),
                         const SizedBox(height: 8),
-                        const Text(
-                          '• Reminders help you discover new restaurants daily',
-                          style: TextStyle(fontSize: 14),
-                        ),
+                        const Text('• Reminders help you discover new restaurants daily',
+                            style: TextStyle(fontSize: 14)),
                         const SizedBox(height: 8),
-                        const Text(
-                          '• You can change the time anytime',
-                          style: TextStyle(fontSize: 14),
-                        ),
+                        const Text('• You can change the time anytime',
+                            style: TextStyle(fontSize: 14)),
                         const SizedBox(height: 8),
-                        const Text(
-                          '• Make sure notification permissions are enabled',
-                          style: TextStyle(fontSize: 14),
-                        ),
+                        const Text('• Make sure notification permissions are enabled',
+                            style: TextStyle(fontSize: 14)),
                       ],
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 24),
-                
-                // Test Notification Button
                 if (reminderProvider.isReminderEnabled)
                   Center(
                     child: Column(
                       children: [
                         OutlinedButton.icon(
-                          onPressed: _testNotificationSent ? null : () => _sendTestNotification(),
+                          onPressed: _testNotificationSent
+                              ? null
+                              : () => _sendTestNotification(context),
                           icon: Icon(
-                            _testNotificationSent ? Icons.check : Icons.notifications,
+                            _testNotificationSent
+                                ? Icons.check
+                                : Icons.notifications,
                           ),
                           label: Text(
-                            _testNotificationSent 
-                              ? 'Test Notification Sent!' 
-                              : 'Send Test Notification',
+                            _testNotificationSent
+                                ? 'Test Notification Sent!'
+                                : 'Send Test Notification',
                           ),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
@@ -219,19 +193,14 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                         if (_testNotificationSent)
                           TextButton(
                             onPressed: () {
-                              setState(() {
-                                _testNotificationSent = false;
-                              });
+                              setState(() => _testNotificationSent = false);
                             },
                             child: const Text('Send Again'),
                           ),
                       ],
                     ),
                   ),
-                
                 const SizedBox(height: 16),
-                
-                // Loading indicator
                 if (_isLoading)
                   const Center(
                     child: Padding(
@@ -290,26 +259,22 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
           const Text(
             'Set a daily reminder to explore new restaurants\nand save your favorites',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _selectTime(BuildContext context, ReminderProvider provider) async {
+  Future<void> _selectTime(
+      BuildContext context, ReminderProvider provider) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: provider.reminderTime,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.blue,
-            ),
+            colorScheme: const ColorScheme.light(primary: Colors.blue),
           ),
           child: child!,
         );
@@ -320,21 +285,22 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
       setState(() => _isLoading = true);
       await provider.setReminderTime(picked);
       setState(() => _isLoading = false);
-      
-      _showSnackBar('Reminder time updated to ${picked.format(context)}');
+      if (context.mounted) {
+        _showSnackBar('Reminder time updated to ${picked.format(context)}');
+      }
     }
   }
 
-  Future<void> _sendTestNotification() async {
+  Future<void> _sendTestNotification(BuildContext context) async {
     setState(() => _isLoading = true);
-    
+
     try {
-      await NotificationService().showTestNotification();
+      // Lewat provider, bukan singleton langsung
+      await context.read<ReminderProvider>().sendTestNotification();
       setState(() {
         _testNotificationSent = true;
         _isLoading = false;
       });
-      
       _showSnackBar('Test notification sent! Check your notifications.');
     } catch (e) {
       setState(() => _isLoading = false);

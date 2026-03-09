@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 
 class ReminderProvider extends ChangeNotifier {
-  // Gunakan base class
   late final NotificationServiceBase _notificationService;
   
   bool _isReminderEnabled = false;
@@ -13,7 +12,6 @@ class ReminderProvider extends ChangeNotifier {
   bool get isReminderEnabled => _isReminderEnabled;
   TimeOfDay get reminderTime => _reminderTime;
 
-  // Constructor dengan parameter optional
   ReminderProvider({NotificationServiceBase? notificationService}) {
     _notificationService = notificationService ?? NotificationService();
     _loadReminderSettings();
@@ -27,7 +25,7 @@ class ReminderProvider extends ChangeNotifier {
         _reminderTime = savedTime;
       }
     } catch (e) {
-      print('Error loading reminder settings: $e');
+      debugPrint('Error loading reminder settings: $e');
     }
     notifyListeners();
   }
@@ -42,7 +40,7 @@ class ReminderProvider extends ChangeNotifier {
         await _notificationService.toggleReminder(false);
       }
     } catch (e) {
-      print('Error toggling reminder: $e');
+      debugPrint('Error toggling reminder: $e');
     }
     
     notifyListeners();
@@ -56,7 +54,7 @@ class ReminderProvider extends ChangeNotifier {
         await _notificationService.scheduleDailyReminder(time);
       }
     } catch (e) {
-      print('Error setting reminder time: $e');
+      debugPrint('Error setting reminder time: $e');
     }
     
     notifyListeners();
@@ -69,10 +67,19 @@ class ReminderProvider extends ChangeNotifier {
     try {
       await _notificationService.toggleReminder(enabled, time: time);
     } catch (e) {
-      print('Error updating reminder: $e');
+      debugPrint('Error updating reminder: $e');
     }
     
     notifyListeners();
+  }
+
+  // Tambahan method baru
+  Future<void> sendTestNotification() async {
+    try {
+      await _notificationService.showTestNotification();
+    } catch (e) {
+      debugPrint('Error sending test notification: $e');
+    }
   }
 
   String getFormattedTime() {
