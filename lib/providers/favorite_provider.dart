@@ -1,35 +1,69 @@
 // providers/favorite_provider.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/favorite_restaurant.dart';
-import '../models/restaurant.dart'; // Add this if you want to handle Restaurant type
+import '../models/restaurant.dart';
 
 class FavoriteProvider extends ChangeNotifier {
+  static const String _favoritesKey = 'favorite_restaurants';
+
   final List<FavoriteRestaurant> _favoriteRestaurants = [];
 
-  List<FavoriteRestaurant> get favoriteRestaurants => 
+  List<FavoriteRestaurant> get favoriteRestaurants =>
       List.unmodifiable(_favoriteRestaurants);
 
-  // Check if a restaurant is favorite by ID
+  FavoriteProvider() {
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? favoritesJson = prefs.getString(_favoritesKey);
+
+      if (favoritesJson != null) {
+        final List<dynamic> decoded = jsonDecode(favoritesJson);
+        _favoriteRestaurants.clear();
+        _favoriteRestaurants
+            .addAll(decoded.map((e) => FavoriteRestaurant.fromJson(e)).toList());
+      }
+    } catch (e) {
+      debugPrint('Error loading favorites: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> _saveFavorites() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String encoded =
+          jsonEncode(_favoriteRestaurants.map((e) => e.toJson()).toList());
+      await prefs.setString(_favoritesKey, encoded);
+    } catch (e) {
+      debugPrint('Error saving favorites: $e');
+    }
+  }
+
   bool isFavorite(String id) {
     return _favoriteRestaurants.any((restaurant) => restaurant.id == id);
   }
 
-  // Add favorite (accepts FavoriteRestaurant)
   Future<void> addFavorite(FavoriteRestaurant restaurant) async {
     if (!isFavorite(restaurant.id)) {
       _favoriteRestaurants.add(restaurant);
+      await _saveFavorites();
       notifyListeners();
     }
   }
 
-  // Remove favorite by ID
   Future<void> removeFavorite(String id) async {
     _favoriteRestaurants.removeWhere((restaurant) => restaurant.id == id);
+    await _saveFavorites();
     notifyListeners();
   }
 
-  // Toggle favorite (accepts FavoriteRestaurant)
   void toggleFavorite(FavoriteRestaurant restaurant) {
     if (isFavorite(restaurant.id)) {
       removeFavorite(restaurant.id);
@@ -38,7 +72,6 @@ class FavoriteProvider extends ChangeNotifier {
     }
   }
 
-  // Optional: Helper method to convert and toggle Restaurant
   void toggleRestaurant(dynamic restaurant) {
     if (restaurant is Restaurant) {
       final favoriteRestaurant = FavoriteRestaurant(
@@ -54,14 +87,11 @@ class FavoriteProvider extends ChangeNotifier {
     }
   }
 
-  // Get all favorites
-  List<FavoriteRestaurant> getFavorites() {
-    return _favoriteRestaurants;
-  }
+  List<FavoriteRestaurant> getFavorites() => _favoriteRestaurants;
 
-  // Clear all favorites
-  void clearAllFavorites() {
+  Future<void> clearAllFavorites() async {
     _favoriteRestaurants.clear();
+    await _saveFavorites();
     notifyListeners();
   }
 }

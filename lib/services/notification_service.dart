@@ -7,11 +7,8 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb; // TAMBAHKAN INI
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-// ============================================
-// BASE CLASS / INTERFACE
-// ============================================
 abstract class NotificationServiceBase {
   Future<void> init();
   Future<void> showNotification({
@@ -27,37 +24,32 @@ abstract class NotificationServiceBase {
   Future<void> showTestNotification();
 }
 
-// ============================================
-// IMPLEMENTASI REAL
-// ============================================
 class NotificationService implements NotificationServiceBase {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  // Plugin hanya untuk mobile
   FlutterLocalNotificationsPlugin? _flutterLocalNotificationsPlugin;
-  
+
   static const String _reminderEnabledKey = 'daily_reminder_enabled';
   static const String _reminderTimeKey = 'daily_reminder_time';
   static const int _reminderNotificationId = 1001;
 
   bool _isInitialized = false;
-  
-  // Cek apakah platform mobile (bukan web)
+
   bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   @override
   Future<void> init() async {
     if (_isInitialized || !_isMobile) {
-      if (!_isMobile) {
-        debugPrint('Notifications not supported on this platform');
-      }
+      if (!_isMobile) debugPrint('Notifications not supported on this platform');
       return;
     }
 
     try {
       tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+      debugPrint('Timezone set to: Asia/Jakarta');
 
       _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -73,7 +65,8 @@ class NotificationService implements NotificationServiceBase {
         requestSoundPermission: true,
       );
 
-      const InitializationSettings initializationSettings = InitializationSettings(
+      const InitializationSettings initializationSettings =
+          InitializationSettings(
         android: initializationSettingsAndroid,
         iOS: initializationSettingsIOS,
       );
@@ -98,7 +91,7 @@ class NotificationService implements NotificationServiceBase {
 
   Future<void> _createNotificationChannel() async {
     if (!_isMobile) return;
-    
+
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'daily_reminder_channel',
       'Daily Reminder',
@@ -109,19 +102,17 @@ class NotificationService implements NotificationServiceBase {
     );
 
     await _flutterLocalNotificationsPlugin!
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
   }
 
   Future<void> _requestPermissions() async {
     if (!_isMobile) return;
-    
+
     try {
       if (await Permission.notification.isDenied) {
         await Permission.notification.request();
       }
-      
       if (await Permission.scheduleExactAlarm.isDenied) {
         await Permission.scheduleExactAlarm.request();
       }
@@ -140,7 +131,7 @@ class NotificationService implements NotificationServiceBase {
       debugPrint('Notifications not supported on web - would show: $title - $body');
       return;
     }
-    
+
     if (!_isInitialized) await init();
 
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
@@ -182,12 +173,14 @@ class NotificationService implements NotificationServiceBase {
       await _saveReminderSettings(true, time);
       return;
     }
-    
+
     if (!_isInitialized) await init();
 
     try {
-      final now = DateTime.now();
-      final scheduledDate = DateTime(
+      final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+
+      tz.TZDateTime scheduledDate = tz.TZDateTime(
+        tz.local,
         now.year,
         now.month,
         now.day,
@@ -195,21 +188,11 @@ class NotificationService implements NotificationServiceBase {
         time.minute,
       );
 
-      tz.TZDateTime scheduledTZDate;
       if (scheduledDate.isBefore(now)) {
-        scheduledTZDate = tz.TZDateTime(
-          tz.local,
-          now.year,
-          now.month,
-          now.day + 1,
-          time.hour,
-          time.minute,
-        );
-      } else {
-        scheduledTZDate = tz.TZDateTime.from(scheduledDate, tz.local);
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
-      debugPrint('Scheduling reminder for: $scheduledTZDate');
+      debugPrint('Scheduling reminder for: $scheduledDate (timezone: ${tz.local.name})');
 
       await cancelReminder();
 
@@ -217,7 +200,7 @@ class NotificationService implements NotificationServiceBase {
         _reminderNotificationId,
         '🍽️ Time to Explore Restaurants!',
         'Discover new restaurants and save your favorites today!',
-        scheduledTZDate,
+        scheduledDate,
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'daily_reminder_channel',
@@ -231,7 +214,7 @@ class NotificationService implements NotificationServiceBase {
           ),
           iOS: DarwinNotificationDetails(),
         ),
-        androidAllowWhileIdle: true,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -254,7 +237,6 @@ class NotificationService implements NotificationServiceBase {
         debugPrint('Error canceling reminder: $e');
       }
     }
-    
     await _saveReminderSettings(false, null);
     debugPrint('Reminder cancelled');
   }
@@ -275,7 +257,7 @@ class NotificationService implements NotificationServiceBase {
     try {
       final prefs = await SharedPreferences.getInstance();
       final timeString = prefs.getString(_reminderTimeKey);
-      
+
       if (timeString != null && timeString.isNotEmpty) {
         final parts = timeString.split(':');
         if (parts.length == 2) {
@@ -295,7 +277,7 @@ class NotificationService implements NotificationServiceBase {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_reminderEnabledKey, enabled);
-      
+
       if (time != null) {
         final timeString = '${time.hour}:${time.minute}';
         await prefs.setString(_reminderTimeKey, timeString);
@@ -313,7 +295,7 @@ class NotificationService implements NotificationServiceBase {
     try {
       final enabled = await isReminderEnabled();
       final time = await getReminderTime();
-      
+
       if (enabled && time != null) {
         debugPrint('Rescheduling existing reminder for ${time.hour}:${time.minute}');
         await scheduleDailyReminder(time);

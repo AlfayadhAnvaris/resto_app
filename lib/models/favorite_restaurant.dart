@@ -23,8 +23,7 @@ class FavoriteRestaurant {
     };
   }
 
-  factory FavoriteRestaurant.fromMap(
-      Map<String, dynamic> map) {
+  factory FavoriteRestaurant.fromMap(Map<String, dynamic> map) {
     return FavoriteRestaurant(
       id: map['id'],
       name: map['name'],
@@ -33,4 +32,10 @@ class FavoriteRestaurant {
       rating: map['rating'],
     );
   }
+
+  // Tambahan baru
+  Map<String, dynamic> toJson() => toMap();
+
+  factory FavoriteRestaurant.fromJson(Map<String, dynamic> json) =>
+      FavoriteRestaurant.fromMap(json);
 }

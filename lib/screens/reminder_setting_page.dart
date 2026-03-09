@@ -4,16 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/reminder_provider.dart';
 
-class ReminderSettingsPage extends StatefulWidget {
+class ReminderSettingsPage extends StatelessWidget {
   const ReminderSettingsPage({super.key});
-
-  @override
-  State<ReminderSettingsPage> createState() => _ReminderSettingsPageState();
-}
-
-class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
-  bool _isLoading = false;
-  bool _testNotificationSent = false;
 
   @override
   Widget build(BuildContext context) {
@@ -54,14 +46,19 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           value: reminderProvider.isReminderEnabled,
                           activeColor: Colors.blue,
                           onChanged: (value) async {
-                            setState(() => _isLoading = true);
                             await reminderProvider.toggleReminder(value);
-                            setState(() => _isLoading = false);
-                            _showSnackBar(
-                              value
-                                  ? 'Daily reminder enabled'
-                                  : 'Daily reminder disabled',
-                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(value
+                                      ? 'Daily reminder enabled'
+                                      : 'Daily reminder disabled'),
+                                  backgroundColor: Colors.green,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
                           },
                         ),
                         const Divider(height: 32),
@@ -92,11 +89,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(
-                                    Icons.access_time,
-                                    color: Colors.blue,
-                                    size: 28,
-                                  ),
+                                  const Icon(Icons.access_time,
+                                      color: Colors.blue, size: 28),
                                   const SizedBox(width: 12),
                                   Text(
                                     reminderProvider.getFormattedTime(),
@@ -137,7 +131,8 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                            Icon(Icons.info_outline,
+                                color: Colors.blue, size: 20),
                             SizedBox(width: 8),
                             Text(
                               'About Daily Reminder',
@@ -149,16 +144,19 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        const Text('• You will receive a notification at your selected time',
+                        const Text(
+                            '• You will receive a notification at your selected time',
                             style: TextStyle(fontSize: 14)),
                         const SizedBox(height: 8),
-                        const Text('• Reminders help you discover new restaurants daily',
+                        const Text(
+                            '• Reminders help you discover new restaurants daily',
                             style: TextStyle(fontSize: 14)),
                         const SizedBox(height: 8),
                         const Text('• You can change the time anytime',
                             style: TextStyle(fontSize: 14)),
                         const SizedBox(height: 8),
-                        const Text('• Make sure notification permissions are enabled',
+                        const Text(
+                            '• Make sure notification permissions are enabled',
                             style: TextStyle(fontSize: 14)),
                       ],
                     ),
@@ -170,16 +168,16 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                     child: Column(
                       children: [
                         OutlinedButton.icon(
-                          onPressed: _testNotificationSent
+                          onPressed: reminderProvider.testNotificationSent
                               ? null
-                              : () => _sendTestNotification(context),
+                              : () => reminderProvider.sendTestNotification(),
                           icon: Icon(
-                            _testNotificationSent
+                            reminderProvider.testNotificationSent
                                 ? Icons.check
                                 : Icons.notifications,
                           ),
                           label: Text(
-                            _testNotificationSent
+                            reminderProvider.testNotificationSent
                                 ? 'Test Notification Sent!'
                                 : 'Send Test Notification',
                           ),
@@ -190,18 +188,17 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
                             ),
                           ),
                         ),
-                        if (_testNotificationSent)
+                        if (reminderProvider.testNotificationSent)
                           TextButton(
-                            onPressed: () {
-                              setState(() => _testNotificationSent = false);
-                            },
+                            onPressed: () =>
+                                reminderProvider.resetTestNotification(),
                             child: const Text('Send Again'),
                           ),
                       ],
                     ),
                   ),
                 const SizedBox(height: 16),
-                if (_isLoading)
+                if (reminderProvider.isLoading)
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(16),
@@ -282,40 +279,17 @@ class _ReminderSettingsPageState extends State<ReminderSettingsPage> {
     );
 
     if (picked != null && picked != provider.reminderTime) {
-      setState(() => _isLoading = true);
       await provider.setReminderTime(picked);
-      setState(() => _isLoading = false);
       if (context.mounted) {
-        _showSnackBar('Reminder time updated to ${picked.format(context)}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reminder time updated to ${picked.format(context)}'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     }
-  }
-
-  Future<void> _sendTestNotification(BuildContext context) async {
-    setState(() => _isLoading = true);
-
-    try {
-      // Lewat provider, bukan singleton langsung
-      await context.read<ReminderProvider>().sendTestNotification();
-      setState(() {
-        _testNotificationSent = true;
-        _isLoading = false;
-      });
-      _showSnackBar('Test notification sent! Check your notifications.');
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar('Failed to send test notification', isError: true);
-    }
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 }
