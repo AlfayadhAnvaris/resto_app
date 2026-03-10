@@ -2,11 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:resto_app/providers/home_provider.dart';
 import 'package:resto_app/providers/reminder_provider.dart';
 import 'package:resto_app/screens/reminder_setting_page.dart';
 import '../providers/restaurant_provider.dart';
 import '../providers/favorite_provider.dart';
-import '../providers/theme_provider.dart'; // Add this import
+import '../providers/theme_provider.dart';
 import '../states/restaurant_state.dart';
 import '../widgets/loading_widget.dart';
 import '../models/favorite_restaurant.dart';
@@ -20,9 +21,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  int _selectedIndex = 0;
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -30,7 +29,6 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
 
-    // Initialize animations
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -41,7 +39,6 @@ class _HomePageState extends State<HomePage>
     );
     _animationController.forward();
 
-    // Fetch data if not already loaded
     Future.microtask(() {
       final provider = context.read<RestaurantProvider>();
       if (provider.restaurants.isEmpty) {
@@ -61,202 +58,203 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Scaffold(
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: IndexedStack(
-          index: _selectedIndex,
-          children: [
-            _buildRestaurantListPage(),
-            _buildFavoritePage(),
-            _buildProfilePage(themeProvider),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant),
-            label: 'Restaurants',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Favorites',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
-    );
-  }
-
-  /// Restaurants List Page
-  Widget _buildRestaurantListPage() {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Restaurants'),
-        actions: [
-          Consumer<ThemeProvider>(
-            builder: (context, themeProvider, child) {
-              return IconButton(
-                icon: Icon(
-                  themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                ),
-                onPressed: () {
-                  themeProvider.toggleTheme(!themeProvider.isDarkMode);
-                },
-              );
-            },
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search restaurants...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon:
-                    _searchQuery.isNotEmpty
-                        ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                          },
-                        )
-                        : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor:
-                    Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey[800]
-                        : Colors.grey[200],
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
-              },
+    return Consumer<HomeProvider>(
+      builder: (context, homeProvider, child) {
+        return Scaffold(
+          body: FadeTransition(
+            opacity: _fadeAnimation,
+            child: IndexedStack(
+              index: homeProvider.selectedIndex,
+              children: [
+                _buildRestaurantListPage(),
+                _buildFavoritePage(),
+                _buildProfilePage(themeProvider),
+              ],
             ),
           ),
-        ),
-      ),
-      body: Consumer<RestaurantProvider>(
-        builder: (context, provider, child) {
-          final state = provider.state;
-
-          if (state is RestaurantLoading) {
-            return const LoadingWidget();
-          }
-
-          if (state is RestaurantLoaded) {
-            var restaurants = provider.restaurants;
-
-            // Filter by search query
-            if (_searchQuery.isNotEmpty) {
-              restaurants =
-                  restaurants
-                      .where(
-                        (r) =>
-                            r.name.toLowerCase().contains(_searchQuery) ||
-                            r.city.toLowerCase().contains(_searchQuery),
-                      )
-                      .toList();
-            }
-
-            if (restaurants.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _searchQuery.isNotEmpty
-                          ? Icons.search_off
-                          : Icons.restaurant,
-                      size: 80,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? 'No restaurants found for "$_searchQuery"'
-                          : 'No restaurants available',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    if (_searchQuery.isNotEmpty)
-                      TextButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                        child: const Text('Clear Search'),
-                      ),
-                  ],
-                ),
-              );
-            }
-
-            return RefreshIndicator(
-              onRefresh: () => provider.getRestaurantList(),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: restaurants.length,
-                itemBuilder: (context, index) {
-                  final restaurant = restaurants[index];
-                  return _buildRestaurantCard(restaurant);
-                },
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: homeProvider.selectedIndex,
+            onTap: (index) => homeProvider.setSelectedIndex(index),
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.restaurant),
+                label: 'Restaurants',
               ),
-            );
-          }
-
-          if (state is RestaurantError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    style: const TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.getRestaurantList(),
-                    child: const Text('Retry'),
-                  ),
-                ],
+              BottomNavigationBarItem(
+                icon: Icon(Icons.favorite),
+                label: 'Favorites',
               ),
-            );
-          }
-
-          return const SizedBox();
-        },
-      ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  /// Restaurant Card Widget
+  Widget _buildRestaurantListPage() {
+    return Consumer<HomeProvider>(
+      builder: (context, homeProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Restaurants'),
+            actions: [
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+                  return IconButton(
+                    icon: Icon(
+                      themeProvider.isDarkMode
+                          ? Icons.light_mode
+                          : Icons.dark_mode,
+                    ),
+                    onPressed: () {
+                      themeProvider.toggleTheme(!themeProvider.isDarkMode);
+                    },
+                  );
+                },
+              ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(60),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search restaurants...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: homeProvider.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              homeProvider.clearSearch();
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[800]
+                            : Colors.grey[200],
+                  ),
+                  onChanged: (value) => homeProvider.setSearchQuery(value),
+                ),
+              ),
+            ),
+          ),
+          body: Consumer<RestaurantProvider>(
+            builder: (context, provider, child) {
+              final state = provider.state;
+
+              if (state is RestaurantLoading) {
+                return const LoadingWidget();
+              }
+
+              if (state is RestaurantLoaded) {
+                var restaurants = provider.restaurants;
+
+                if (homeProvider.searchQuery.isNotEmpty) {
+                  restaurants = restaurants
+                      .where(
+                        (r) =>
+                            r.name
+                                .toLowerCase()
+                                .contains(homeProvider.searchQuery) ||
+                            r.city
+                                .toLowerCase()
+                                .contains(homeProvider.searchQuery),
+                      )
+                      .toList();
+                }
+
+                if (restaurants.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          homeProvider.searchQuery.isNotEmpty
+                              ? Icons.search_off
+                              : Icons.restaurant,
+                          size: 80,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          homeProvider.searchQuery.isNotEmpty
+                              ? 'No restaurants found for "${homeProvider.searchQuery}"'
+                              : 'No restaurants available',
+                          style: const TextStyle(
+                              fontSize: 16, color: Colors.grey),
+                        ),
+                        if (homeProvider.searchQuery.isNotEmpty)
+                          TextButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              homeProvider.clearSearch();
+                            },
+                            child: const Text('Clear Search'),
+                          ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () => provider.getRestaurantList(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: restaurants.length,
+                    itemBuilder: (context, index) {
+                      final restaurant = restaurants[index];
+                      return _buildRestaurantCard(restaurant);
+                    },
+                  ),
+                );
+              }
+
+              if (state is RestaurantError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        state.message,
+                        style: const TextStyle(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => provider.getRestaurantList(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return const SizedBox();
+            },
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildRestaurantCard(restaurant) {
     return Consumer2<FavoriteProvider, ThemeProvider>(
       builder: (context, favoriteProvider, themeProvider, child) {
@@ -276,7 +274,6 @@ class _HomePageState extends State<HomePage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(12),
@@ -291,17 +288,15 @@ class _HomePageState extends State<HomePage>
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             height: 180,
-                            color:
-                                themeProvider.isDarkMode
-                                    ? Colors.grey[800]
-                                    : Colors.grey[300],
+                            color: themeProvider.isDarkMode
+                                ? Colors.grey[800]
+                                : Colors.grey[300],
                             child: const Center(
                               child: Icon(Icons.broken_image, size: 50),
                             ),
                           );
                         },
                       ),
-                      // Gradient overlay for better text visibility
                       Positioned.fill(
                         child: DecoratedBox(
                           decoration: BoxDecoration(
@@ -316,7 +311,6 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                       ),
-                      // Rating badge
                       Positioned(
                         top: 8,
                         left: 8,
@@ -331,11 +325,8 @@ class _HomePageState extends State<HomePage>
                           ),
                           child: Row(
                             children: [
-                              const Icon(
-                                Icons.star,
-                                size: 14,
-                                color: Colors.white,
-                              ),
+                              const Icon(Icons.star,
+                                  size: 14, color: Colors.white),
                               const SizedBox(width: 4),
                               Text(
                                 restaurant.rating.toString(),
@@ -348,7 +339,6 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                       ),
-                      // Favorite button
                       Positioned(
                         top: 8,
                         right: 8,
@@ -390,7 +380,6 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                       ),
-                      // Restaurant name overlay
                       Positioned(
                         bottom: 8,
                         left: 8,
@@ -409,8 +398,6 @@ class _HomePageState extends State<HomePage>
                     ],
                   ),
                 ),
-
-                // Content
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
@@ -418,10 +405,9 @@ class _HomePageState extends State<HomePage>
                       Icon(
                         Icons.location_on,
                         size: 16,
-                        color:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey[400]
-                                : Colors.grey[600],
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[400]
+                            : Colors.grey[600],
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -433,7 +419,6 @@ class _HomePageState extends State<HomePage>
                                   : Colors.grey[600],
                         ),
                       ),
-                      const SizedBox(width: 16),
                     ],
                   ),
                 ),
@@ -445,7 +430,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  /// Favorites Page
   Widget _buildFavoritePage() {
     return Scaffold(
       appBar: AppBar(
@@ -474,15 +458,13 @@ class _HomePageState extends State<HomePage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.favorite_border,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
+                  Icon(Icons.favorite_border,
+                      size: 80, color: Colors.grey.shade400),
                   const SizedBox(height: 16),
                   Text(
                     'No favorites yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+                    style:
+                        TextStyle(fontSize: 18, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -552,7 +534,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  /// Profile Page with Theme Switching
   Widget _buildProfilePage(ThemeProvider themeProvider) {
     return Scaffold(
       appBar: AppBar(
@@ -576,49 +557,40 @@ class _HomePageState extends State<HomePage>
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Profile Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color:
-                    Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey[800]
-                        : Colors.blue.shade50,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[800]
+                    : Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.blue,
-                    child: const Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Colors.white,
-                    ),
+                    child: Icon(Icons.person, size: 50, color: Colors.white),
                   ),
                   const SizedBox(height: 16),
                   const Text(
                     'Food Lover',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'restaurant.lover@email.com',
                     style: TextStyle(
-                      color:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey[400]
-                              : Colors.grey[600],
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[400]
+                          : Colors.grey[600],
                     ),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Statistics
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -627,18 +599,12 @@ class _HomePageState extends State<HomePage>
                     const Text(
                       'Your Statistics',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     Consumer2<RestaurantProvider, FavoriteProvider>(
-                      builder: (
-                        context,
-                        restaurantProvider,
-                        favoriteProvider,
-                        child,
-                      ) {
+                      builder: (context, restaurantProvider, favoriteProvider,
+                          child) {
                         return Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
@@ -668,56 +634,58 @@ class _HomePageState extends State<HomePage>
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // Settings Menu
             Card(
               child: Column(
                 children: [
-                  // Theme Switch
-                  ListTile(
-                    leading: Icon(
-                      themeProvider.isDarkMode
-                          ? Icons.dark_mode
-                          : Icons.light_mode,
-                      color:
-                          themeProvider.isDarkMode ? Colors.amber : Colors.blue,
-                    ),
-                    title: const Text('Dark Mode'),
-                    trailing: Switch(
-                      value: themeProvider.isDarkMode,
-                      onChanged: (value) {
-                        themeProvider.toggleTheme(value);
-                      },
-                      activeColor: Colors.blue,
-                    ),
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, child) {
+                      return ListTile(
+                        leading: Icon(
+                          themeProvider.isDarkMode
+                              ? Icons.dark_mode
+                              : Icons.light_mode,
+                          color: themeProvider.isDarkMode
+                              ? Colors.amber
+                              : Colors.blue,
+                        ),
+                        title: const Text('Dark Mode'),
+                        trailing: Switch(
+                          value: themeProvider.isDarkMode,
+                          onChanged: (value) {
+                            themeProvider.toggleTheme(value);
+                          },
+                          activeColor: Colors.blue,
+                        ),
+                      );
+                    },
                   ),
-                  // Di bagian Settings Menu di profile page, tambahkan:
-
-// Daily Reminder
-ListTile(
-  leading: const Icon(Icons.notifications_active, color: Colors.blue),
-  title: const Text('Daily Reminder'),
-  subtitle: Consumer<ReminderProvider>(
-    builder: (context, reminderProvider, child) {
-      if (reminderProvider.isReminderEnabled) {
-        return Text('At ${reminderProvider.getFormattedTime()}');
-      } else {
-        return const Text('Disabled');
-      }
-    },
-  ),
-  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ReminderSettingsPage(),
-      ),
-    );
-  },
-),
+                  const Divider(),
+                  Consumer<ReminderProvider>(
+                    builder: (context, reminderProvider, child) {
+                      return ListTile(
+                        leading: const Icon(Icons.notifications_active,
+                            color: Colors.blue),
+                        title: const Text('Daily Reminder'),
+                        subtitle: Text(
+                          reminderProvider.isReminderEnabled
+                              ? 'At ${reminderProvider.getFormattedTime()}'
+                              : 'Disabled',
+                        ),
+                        trailing:
+                            const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const ReminderSettingsPage(),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                   const Divider(),
                 ],
               ),
@@ -729,11 +697,7 @@ ListTile(
   }
 
   Widget _buildStatItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+      String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Container(
